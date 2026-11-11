@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
@@ -46,5 +50,33 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: docker push "$DOCKERHUB_USERNAME/nexus-app:latest"
 
+      - name: Configure AWS credentials using OIDC
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Deploy to EC2 using AWS SSM
+        if: github.event_name == 'push'
+        id: deploy
+        shell: bash
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "i-0d25469207b640990" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["sudo docker pull uttam9124/nexus-app:latest","sudo docker rm -f nexus-container || true","sudo docker run -d --restart unless-stopped --name nexus-container -p 5000:5000 uttam9124/nexus-app:latest"]' \
+            --comment "NEXUS automatic deployment" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "command-id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0d25469207b640990"
+
+          echo "Deployment completed successfully!"
+
       - name: Pipeline completed
-        run: echo "NEXUS CI/CD pipeline successful!"
+        run: echo "NEXUS CI/CD and EC2 deployment successful!"
