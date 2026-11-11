@@ -79,4 +79,5 @@ jobs:
           echo "Deployment completed successfully!"
 
       - name: Pipeline completed
+      
         run: echo "NEXUS CI/CD and EC2 deployment successful!"
