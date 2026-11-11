@@ -1,4 +1,4 @@
-name: NEXUS CI/CD Pipeline
+name: NEXUS CI/CD Pipeline v2
 
 on:
   push:
