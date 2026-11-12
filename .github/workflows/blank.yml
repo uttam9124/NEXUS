@@ -1,4 +1,4 @@
-name: NEXUS CI/CD Pipeline v2
+name: NEXUS CI/CD Pipeline
 
 on:
   push:
@@ -59,7 +59,6 @@ jobs:
 
       - name: Deploy to EC2 using AWS SSM
         if: github.event_name == 'push'
-        id: deploy
         shell: bash
         run: |
           COMMAND_ID=$(aws ssm send-command \
@@ -70,14 +69,11 @@ jobs:
             --query "Command.CommandId" \
             --output text)
 
-          echo "command-id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
-
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
             --instance-id "i-0d25469207b640990"
 
-          echo "Deployment completed successfully!"
+          echo "NEXUS deployment completed successfully!"
 
       - name: Pipeline completed
-      
-        run: echo "NEXUS CI/CD and EC2 deployment successful!"
+        run: echo "NEXUS CI/CD pipeline successful!"
